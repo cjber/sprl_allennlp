@@ -11,8 +11,6 @@ class SprlPredictor(Predictor):
 
         outputs['tokens'] = [str(token)
                              for token in instance.fields['tokens'].tokens]
-        outputs['predicted'] = [label_vocab[l]
-                                for l in outputs['logits'].argmax(1)]
-        outputs['labels'] = instance.fields['label'].labels
-
+        outputs['predicted'] = [label_vocab[logit]
+                                for logit in outputs['logits'].argmax(1)]
         return sanitize(outputs)

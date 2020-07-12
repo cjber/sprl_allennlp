@@ -1,0 +1,5 @@
+Model pipeline?
+
+1. NER
+2. Coreference resolution: There is a [town], [it] is near liverpool.  it <- town
+3. SPrL
