@@ -62,11 +62,7 @@ class SpaceEvalReader(DatasetReader):
                             instance = self.text_to_instance(
                                 tokens)
                             instances.append(instance)
-                else:
-                    pass
-
-        for instance in instances:
-            yield instance
+        yield from instances
 
     def extract_labels(self, text, tags):
         ent_labels = ['PATH', 'PLACE', 'MOTION',
@@ -74,10 +70,9 @@ class SpaceEvalReader(DatasetReader):
                       'MEASURE']
 
         ents = [tag for tag in tags if tag.tag in ent_labels]
-        ents_spacy = [(int(ent.attrib['start']),
+        return [(int(ent.attrib['start']),
                        int(ent.attrib['end']), ent.tag)
                       for ent in ents]
-        return ents_spacy
 
     def text_to_instance(self,
                          tokens: List[str],
