@@ -6,12 +6,11 @@ authors = ["cjber <cjberragan@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-allennlp = "^1.0.0"
 allennlp-models = "^1.0.0"
-pandas = "^1.0.5"
-numpy = "^1.19.0"
-streamlit = "^0.62.1"
-matplotlib = "^3.2.2"
+allennlp = "^1.0.0"
+optuna = "^2.0.0"
+ipython = "^7.16.1"
+ipdb = "^0.13.3"
 
 [tool.poetry.dev-dependencies]
 
