@@ -1,24 +1,8 @@
-local data_dir = "/home/cjber/data/sprl/ents_spaceeval";
-local lstm_input_dim = 1202;
-local ff_dim = 400;
-local lstm_hidden_dim = 200;
-local batch_size = 8;
-local cuda_device = 0;
-local num_epochs = 10;
-local seed = 42;
-
-local char_embedding_dim = std.parseInt(std.extVar('char_embedding_dim'));
-local ff_num_layers = std.parseInt(std.extVar('ff_num_layers'));
-local lstm_num_layers = std.parseInt(std.extVar('lstm_num_layers'));
-local dropout = std.parseJson(std.extVar('dropout'));
-local lr = std.parseJson(std.extVar('lr'));
+local data_dir = "/home/cjber/drive/phd/programming/sprl_allennlp/sprl";
 
 {
-    numpy_seed: seed,
-    pytorch_seed: seed,
-    random_seed: seed,
      dataset_reader: {
-         type: "sprl.ent_reader.SpaceEvalReader",
+         type: "spaceeval_reader",
          token_indexers: {
              elmo: {
                  type: "elmo_characters"
@@ -32,34 +16,34 @@ local lr = std.parseJson(std.extVar('lr'));
             }
         }
     },
-     train_data_path: data_dir + "/train/",
-     validation_data_path: data_dir + "/test/",
+     train_data_path: data_dir + "/train.txt",
+     validation_data_path: data_dir + "/test.txt",
      data_loader: {
          batch_sampler: {
              type: "bucket",
-             batch_size: batch_size # 64 optimal
+             batch_size: 64  # 64 optimal
         }
     },
      model: {
-         type: "allennlp_models.tagging.models.crf_tagger.CrfTagger",
+         type: "crf_tagger",
          calculate_span_f1: true,
          label_encoding: "BIOUL",
-         dropout: dropout,
+         dropout: 0.5,
          verbose_metrics: true,
          encoder: {
              type: "stacked_bidirectional_lstm",
-             hidden_size: lstm_hidden_dim,
-             input_size: lstm_input_dim,
-             num_layers: lstm_num_layers,
-             recurrent_dropout_probability: 0.5,
+             hidden_size: 200,
+             input_size: 1202,
+             num_layers: 2,
+             #recurrent_dropout_probability: 0.5,
              use_highway: true
         },
          feedforward: {
              activations: "tanh",
-             dropout: dropout, 
-             hidden_dims: ff_dim,
-             input_dim: ff_dim,
-             num_layers: ff_num_layers
+             dropout: 0.5,
+             hidden_dims: 400,
+             input_dim: 400,
+             num_layers: 1
         },
          include_start_end_transitions: false,
          initializer: {
@@ -135,14 +119,14 @@ local lr = std.parseJson(std.extVar('lr'));
              token_characters: {
                  type: "character_encoding",
                  embedding: {
-                     embedding_dim: char_embedding_dim,
+                     embedding_dim: 25,
                      sparse: true,
                      vocab_namespace: "token_characters"
                 },
                  encoder: {
                      type: "lstm",
                      hidden_size: 128,
-                     input_size: char_embedding_dim,
+                     input_size: 25,
                      num_layers: 1
                 }
             },
@@ -157,9 +141,9 @@ local lr = std.parseJson(std.extVar('lr'));
         }
     },
      trainer: {
-         cuda_device: cuda_device,
+         cuda_device: 0,
          grad_norm: 5,
-         num_epochs: num_epochs,
+         num_epochs: 30,
          optimizer: {
              type: "dense_sparse_adam",
              lr: 0.001
