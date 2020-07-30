@@ -89,12 +89,11 @@ def create_triplets(tags, sent, offset):
     )
 
     def merge_ents_to_sr(ent_id, sr_dict, actor):
-        relations = ent_id.merge(sr_dict[['id_sr', actor]],
+        return ent_id.merge(sr_dict[['id_sr', actor]],
                                  left_on='id_ent',
                                  right_on=actor, how='outer'
                                  )\
             .dropna()
-        return relations
 
     sent_labels = []
     for _, row in sr_dict.iterrows():
@@ -129,8 +128,9 @@ def spaceeval_to_conll(spaceeval_xml_file, nlp):
     sent_tokens = []
     sent_ents = []
     sent_sprl = []
+    import ipdb
     for sent in doc.sents:
-        import ipdb;ipdb.set_trace()
+        ipdb.set_trace()
         sent_nlp = nlp(sent.text)
         tokens = [str(token) for token in sent_nlp]
         spatial_entities = extract_labels(tags, sent, offset)
