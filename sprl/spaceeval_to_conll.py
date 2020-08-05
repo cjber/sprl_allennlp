@@ -14,10 +14,10 @@ def extract_labels(tags, sent, offset):
     ent_labels = ['PATH', 'PLACE',
                   'SPATIAL_ENTITY']
     ents = [tag for tag in tags if tag.tag in ent_labels
-            if int(tag.attrib['end']) <= len(sent.text) + offset
+            if int(tag.attrib['end']) <= len(sent) + offset
             if int(tag.attrib['start']) >= offset]
-    ents = [(int(ent.attrib['start']) - offset,
-             int(ent.attrib['end']) - offset,
+    ents = [(int(ent.attrib['start']) - (offset),
+             int(ent.attrib['end']) - (offset),
              ent.tag + '_' + str(ent.attrib['form']))
             for ent in ents
             # very low accuracy for places without NAM/NOM
@@ -25,19 +25,33 @@ def extract_labels(tags, sent, offset):
 
     measure = ['MEASURE']
     measure = [tag for tag in tags if tag.tag in measure
-               if int(tag.attrib['end']) <= len(sent.text) + offset
+               if int(tag.attrib['end']) <= len(sent) + offset
                if int(tag.attrib['start']) >= offset]
 
-    measure = [(int(ent.attrib['start']) - offset,
-                int(ent.attrib['end']) - offset,
+    measure = [(int(ent.attrib['start']) - (offset),
+                int(ent.attrib['end']) - (offset),
                 ent.tag)
                for ent in measure]
 
-    return ents + measure
+    signal_labels = ['SPATIAL_SIGNAL']
+    signal = [tag for tag in tags if tag.tag in signal_labels
+              if int(tag.attrib['end']) <= len(sent) + offset
+              if int(tag.attrib['start']) >= offset]
+
+    signal = [(int(ent.attrib['start']) - (offset),
+               int(ent.attrib['end']) - (offset),
+               ent.tag + '_' + str(ent.attrib['semantic_type']))
+              for ent in signal]
+
+    return ents + measure + signal
 
 
-def coreference_res():
+def coreference_res(tags, sent, offset):
     # data has METALINK with relType = COREFERENCE
+    metalink = ['METALINK']
+    coreference = [tag for tag in tags if tag.tag in metalink]
+    coreference = [rel for rel in coreference
+                   if rel.attrib['relType'] == 'COREFERENCE']
     pass
 
 
@@ -51,7 +65,10 @@ def create_triplets(tags, sent, offset):
     # label a training instance as TRUE if these elements form a correct triple
     # LANDMARKS
 
-    ent_labels = ['PATH', 'PLACE', 'SPATIAL_ENTITY']
+    ent_labels = ['PATH', 'PLACE',
+                  'SPATIAL_ENTITY',
+                  'MOTION',
+                  'NONMOTION_EVENT']
     ents = [tag for tag in tags if tag.tag in ent_labels]
 
     ent_id = pd.DataFrame(
@@ -60,7 +77,7 @@ def create_triplets(tags, sent, offset):
          'end': [int(ent.attrib['end']) - offset for ent in ents]})
 
     ent_id = ent_id[(ent_id['start'] >= offset) &
-                    (ent_id['end'] <= offset + len(sent.text))]
+                    (ent_id['end'] <= offset + len(sent))]
 
     # SPATIAL INDICATORS (as V in SRL)
     spatial_inds = ['SPATIAL_SIGNAL', 'MOTION_SIGNAL']
@@ -73,7 +90,7 @@ def create_triplets(tags, sent, offset):
                  for ind in spatial_indicators]}
     )
     ind_df = ind_df[(ind_df['start'] >= offset) &
-                    (ind_df['end'] <= offset + len(sent.text))]
+                    (ind_df['end'] <= offset + len(sent))]
     ent_id = ent_id.append(ind_df)
 
     # SPATIAL RELATIONS
@@ -123,15 +140,15 @@ def spaceeval_to_conll(spaceeval_xml_file, nlp):
     text: str = root.find('TEXT').text
     tags: List = list(root.find('TAGS'))
 
-    doc = nlp(text)
-
     offset = 0
     sent_tokens = []
     sent_ents = []
     sent_sprl = []
-    for sent in doc.sents:
-        import ipdb;ipdb.set_trace()
-        sent_nlp = nlp(sent.text)
+    for sent in text.split('.'):
+        sent = sent + '.'
+
+        # split sentences by newlines
+        sent_nlp = nlp(sent)
         tokens = [str(token) for token in sent_nlp]
         spatial_entities = extract_labels(tags, sent, offset)
         spatial_triplets = create_triplets(tags, sent, offset)
@@ -158,7 +175,7 @@ def spaceeval_to_conll(spaceeval_xml_file, nlp):
                 sent_ents.append('\n')
                 sent_sprl.extend(sprl)
                 sent_sprl.append('')
-        offset += len(sent.text)
+        offset += len(sent)
 
     file_conll = list(zip(sent_tokens, sent_ents, sent_sprl))
 
@@ -172,28 +189,28 @@ def spaceeval_to_conll(spaceeval_xml_file, nlp):
     return file_conll
 
 
-nlp = spacy.load("en_core_web_lg")
+# nlp = spacy.load("en_core_web_sm")
 
-with open('train.txt', 'w') as fp:
-    for root_dir, _, file in list(
-            os.walk('/home/cjber/data/sprl/ents_spaceeval/train/')
-    ):
-        for data_file in tqdm.tqdm(file):
-            if data_file.endswith('xml'):
-                f = os.path.join(root_dir, data_file)
-                conll_formatted = spaceeval_to_conll(f, nlp)
-                fp.write('\n'.join(
-                    f'{x[0]} {x[1]} {x[2]}'
-                    for x in conll_formatted))
+# with open('train.txt', 'w') as fp:
+#     for root_dir, _, file in list(
+#             os.walk('/home/cjber/data/sprl/ents_spaceeval/train/')
+#     ):
+#         for data_file in tqdm.tqdm(file):
+#             if data_file.endswith('xml'):
+#                 f = os.path.join(root_dir, data_file)
+#                 conll_formatted = spaceeval_to_conll(f, nlp)
+#                 fp.write('\n'.join(
+#                     f'{x[0]} {x[1]} {x[2]}'
+#                     for x in conll_formatted))
 
-with open('test.txt', 'w') as fp:
-    for root_dir, _, file in list(
-            os.walk('/home/cjber/data/sprl/ents_spaceeval/test/')
-    ):
-        for data_file in tqdm.tqdm(file):
-            if data_file.endswith('xml'):
-                f = os.path.join(root_dir, data_file)
-                conll_formatted = spaceeval_to_conll(f, nlp)
-                fp.write('\n'.join(
-                    f'{x[0]} {x[1]}'
-                    for x in conll_formatted))
+# with open('test.txt', 'w') as fp:
+#     for root_dir, _, file in list(
+#             os.walk('/home/cjber/data/sprl/ents_spaceeval/test/')
+#     ):
+#         for data_file in tqdm.tqdm(file):
+#             if data_file.endswith('xml'):
+#                 f = os.path.join(root_dir, data_file)
+#                 conll_formatted = spaceeval_to_conll(f, nlp)
+#                 fp.write('\n'.join(
+#                     f'{x[0]} {x[1]} {x[2]}'
+#                     for x in conll_formatted))
